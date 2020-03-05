@@ -1,0 +1,16 @@
+package constant
+
+//Input ...
+const Input = "input.csv"
+
+//Partners ...
+const Partners = "partners.csv"
+
+//Capacities ...
+const Capacities = "capacities.csv"
+
+//Output1 ...
+const Output1 = "output1.csv"
+
+//Output2 ...
+const Output2 = "output2.csv"
