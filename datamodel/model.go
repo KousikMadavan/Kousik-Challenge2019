@@ -28,7 +28,8 @@ type Output struct {
 // TheatrePartnerData ...
 type TheatrePartnerData struct {
 	Partner
-	Capacity   int
-	IsHigher   bool
-	IsAssigned bool
+	Capacity      int
+	IsHigher      bool
+	IsAssigned    bool
+	AssignedUnits int
 }

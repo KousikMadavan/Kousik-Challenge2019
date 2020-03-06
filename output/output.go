@@ -66,36 +66,28 @@ func Output1(inputData [][]string, partnerRecords []*datamodel.Partner, partnerC
 func Output2(inputSummary map[string]int, inputData [][]string, result []*datamodel.TheatrePartnerData) {
 	var canAccomodate bool
 	output2 := make([]*datamodel.Output, 0)
-	var index int
+	var index, sumCostPerGB int
+	_ = sumCostPerGB
 	for summaryKey, sum := range inputSummary {
 		for _, val := range result {
 			// sum is the total amount for each theatre
 			if sum >= val.MinSize && sum <= val.MaxSize {
 				canAccomodate = true
+				sumCostPerGB = val.CostPerGB
+				break
 			}
 			continue
 		}
-		if !canAccomodate {
-			for _, input := range inputData {
-				inputSize, _ := strconv.Atoi(input[1])
-				deliveryID := strings.TrimSpace(input[0])
-				var finalAmount int
-				var resultPartner string
-				var output *datamodel.Output
-				if index < len(inputData) {
-					var isDeliveryPossible bool
-					for _, v := range result {
-						if summaryKey == v.TheatreID && inputSize > v.MinSize && inputSize < v.MaxSize && !v.IsAssigned {
-							finalAmount = inputSize * v.CostPerGB
-							if finalAmount < v.MinCost {
-								finalAmount = v.MinCost
-							}
-							v.IsAssigned = true
-							resultPartner = v.PartnerID
-							isDeliveryPossible = true
-							break
-						}
-					}
+		var finalAmount int
+		var resultPartner string
+		var output *datamodel.Output
+		var isDeliveryPossible bool
+		for _, input := range inputData {
+			inputSize, _ := strconv.Atoi(input[1])
+			deliveryID := strings.TrimSpace(input[0])
+			if index < len(inputData) {
+				if !canAccomodate {
+					finalAmount, resultPartner, isDeliveryPossible = resultParse(summaryKey, result, finalAmount, inputSize, resultPartner, isDeliveryPossible)
 					index++
 					output = &datamodel.Output{
 						DeliveryID:         deliveryID,
@@ -103,13 +95,47 @@ func Output2(inputSummary map[string]int, inputData [][]string, result []*datamo
 						PartnerID:          resultPartner,
 						ActualCost:         finalAmount,
 					}
-				}
-				if output != nil {
-					output2 = append(output2, output)
+				} else {
+					finalAmount, resultPartner, isDeliveryPossible = resultParse(input[2], result, finalAmount, inputSize, resultPartner, isDeliveryPossible)
+					index++
+					output = &datamodel.Output{
+						DeliveryID:         deliveryID,
+						IsDeliveryPossible: isDeliveryPossible,
+						PartnerID:          resultPartner,
+						ActualCost:         finalAmount,
+					}
+					if output != nil {
+						output2 = append(output2, output)
+					}
 				}
 			}
 		}
+		utils.CreateOutputCSV(output2, constant.Output2)
+		fmt.Println("Succesfully addressed problem 2")
 	}
-	utils.CreateOutputCSV(output2, constant.Output2)
-	fmt.Println("Succesfully addressed problem 2")
+}
+
+func resultParse(summaryKey string, result []*datamodel.TheatrePartnerData, finalAmount int, inputSize int, resultPartner string, isDeliveryPossible bool) (int, string, bool) {
+	for _, v := range result {
+		if summaryKey == v.TheatreID && inputSize > v.MinSize && inputSize < v.MaxSize && (v.AssignedUnits == 0 || (v.AssignedUnits > 0 && (v.Capacity-v.AssignedUnits >= inputSize))) {
+			finalAmount = inputSize * v.CostPerGB
+			if finalAmount < v.MinCost {
+				finalAmount = v.MinCost
+			}
+			resultPartner = v.PartnerID
+			updateAssignedUnits(resultPartner, result, inputSize)
+			isDeliveryPossible = true
+			break
+		}
+	}
+	return finalAmount, resultPartner, isDeliveryPossible
+}
+
+func updateAssignedUnits(resultPartner string, result []*datamodel.TheatrePartnerData, inputSize int) {
+	for _, v := range result {
+		if v.PartnerID == resultPartner {
+			v.IsAssigned = true
+			v.AssignedUnits = inputSize
+		}
+	}
 }
